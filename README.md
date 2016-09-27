@@ -1,5 +1,5 @@
 # aeolus
-Aeolus is a sample pressure app that logs and computes pressure change at intervals useful for atmospheric modelling applications.
+is a sample pressure app that logs and computes pressure change at intervals useful for atmospheric modelling applications.
 
 ![Aeolus Home](http://www.atmos.washington.edu/~cmcnich/emailout2/aeolusmerge.png)
 

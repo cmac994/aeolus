@@ -1,6 +1,9 @@
 # aeolus
 Aeolus is a sample pressure app that logs and computes pressure change at intervals useful for atmospheric modelling applications.
 
+![Aeolus Home](http://www.atmos.washington.edu/~cmcnich/emailout2/aeolus1.png)
+![Aeolus Log](http://www.atmos.washington.edu/~cmcnich/emailout2/aeolus2.png)
+
 This app performs the following functions:
   - Displays real-time pressure measurements from the phone's barometer.
   - Plots pressure and pressure change.

@@ -260,21 +260,22 @@ public class PressureCharts extends AppCompatActivity  {
                     mrange0 = Math.abs(maxpres0-minpres0);
                 }
                 mdiff0 = setLabels(mrange0);
-                if (pscale.equals("psi") || pscale.equals("inHg") || pscale.equals("kPa") || (mrange0 <= 0.5)) {
-                    //Extends limits to prevent data f0rom being cutoff.
-                    maxpres= maxpres0 + 10 * mdiff0;
-                    minpres = minpres0 - 10 * mdiff0;
-                } else {
-                    //Extends limits to prevent data from being cutoff.
-                    maxpres= maxpres0 + 2 * mdiff0;
-                    minpres = minpres0 - 2 * mdiff0;
-                }
+                Timber.d("mrange: %.2f",mrange0);
+                Timber.d("mdiff: %.2f",mdiff0);
+                //Extends limits to prevent data from being cutoff.
+                maxpres= maxpres0 + mdiff0;
+                minpres = minpres0 - mdiff0;
                 //Redefine limits of data
                 mrange = Math.abs(maxpres-minpres);
                 mdiff = setLabels(mrange);
+                Timber.d("mrange: %.2f",mrange);
+                Timber.d("mdiff: %.2f",mdiff);
+
                 //Smooth limits.
-                maxpres = ceilToX(maxpres,mdiff);
-                minpres = floorToX(minpres,mdiff);
+                maxpres = ceilToX(maxpres,1.0f/mdiff);
+                minpres = floorToX(minpres,1.0f/mdiff);
+                Timber.d("maxpres: %.2f",minpres);
+                Timber.d("minpres: %.2f",maxpres);
                 //Determine an appropriate number of y-tick labels
                 labelnum = Math.round((mrange/mdiff) + mdiff);
             }
@@ -323,21 +324,17 @@ public class PressureCharts extends AppCompatActivity  {
                     mrangedp0 = Math.abs(maxdp0-mindp0);
                 }
                 mdiffdp0 = setLabels(mrangedp0);
-                if (pscale.equals("psi") || pscale.equals("inHg") || pscale.equals("kPa") || (mrangedp0 <= 0.5)) {
-                    //Extends limits to prevent data from being cutoff.
-                    maxdp= maxdp0 + 10 * mdiffdp0;
-                    mindp = mindp0 - 10 * mdiffdp0;
-                } else {
-                    //Extends limits to prevent data from being cutoff.
-                    maxdp= maxdp0 + 2 * mdiffdp0;
-                    mindp = mindp0 - 2 * mdiffdp0;
-                }
+
+                //Extends limits to prevent data from being cutoff.
+                maxdp= maxdp0 + mdiffdp0;
+                mindp = mindp0 - mdiffdp0;
+
                 //Redefine limits
                 mrangedp = Math.abs(maxdp - mindp);
                 mdiffdp = setLabels(mrangedp);
                 //Smooth limits
-                maxdp = ceilToX(maxdp,mdiffdp);
-                mindp = floorToX(mindp,mdiffdp);
+                maxdp = ceilToX(maxdp,1.0f/mdiffdp);
+                mindp = floorToX(mindp,1.0f/mdiffdp);
                 //Determine an appropriate number of y-tick labels
                 labelnumdp = Math.round((mrangedp / mdiffdp) + mdiffdp);
             }

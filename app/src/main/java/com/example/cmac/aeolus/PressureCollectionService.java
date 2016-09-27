@@ -431,10 +431,11 @@ public class PressureCollectionService extends Service implements GoogleApiClien
             for (int a = 0; a < lastdbidx; a++) {
                 //Compute the distance between the latest observation location and all previous observation locations.
                 double distbetween = haversine(latlist.get(lastdbidx), lnglist.get(lastdbidx), latlist.get(a), lnglist.get(a));
+                Timber.d("Dist between: %.2f",distbetween);
                 float distmax, gpsmax;
                 //Place a limit on the distance a phone has moved when estimating pressure change to avoid poor quality observations
-                distmax = 60.0f;
                 gpsmax = 30.0f;
+                distmax = 2*gpsmax;
                 //If the phone hasn't moved much in the horizontal and vertical and if it was determined to be stationary and its GPS accuracy was sufficient then compute pressure change if time difference is suitable
                 if (((distbetween < distmax) && (gpsacclist.get(a) <= gpsmax) && (movelist.get(a) == 1))) {
                     Timber.d("a: %d, tdiff: %d, pdiff: %f", a, (epochTime - timlist.get(a)), (press_avg - plist.get(a)));
@@ -528,8 +529,8 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         mLocationRequest.setInterval(5000);
         mLocationRequest.setFastestInterval(3000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        //Set maximum number of updates to 2 (to limit battery usage).
-        mLocationRequest.setNumUpdates(2);
+        //Set maximum number of updates to 3 (to limit battery usage).
+        mLocationRequest.setNumUpdates(3);
     }
 
     //Check location permissions (primarily for API > 22)
@@ -551,9 +552,15 @@ public class PressureCollectionService extends Service implements GoogleApiClien
             /*If location updates takes to long (> 35s after start of location query, 45s after start of service)
             then forcibly stop location updates in loc_runnable.*/
             handler_orig.postDelayed(loc_runnable, 35000);
+            /*IMPORTANT: if possible use both the FusedLocationAPI and the Android Manager to Retrieve location updates.
+            By using both providers improvements in gps accuracy can be obtained and deficiencies in either provider can be offset.
+             */
             if (hasPlay) {
                 //Formally request location updates from Google Play API
                 LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+                //Request location updates from Android manager
+                locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, this);
+                locManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, this);
             } else {
                 //Request location updates from Android manager
                 locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, this);
@@ -573,11 +580,10 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         //Formally stop location updates with request to GoogleAPI Client
         if (hasPlay) {
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
-        } else {
-            //Remove GPS status listener
-            if (checkLocPermission()) {
-                locManager.removeUpdates(this);
-            }
+        }
+        //Remove GPS status listener
+        if (checkLocPermission()) {
+            locManager.removeUpdates(this);
         }
 
         /*If speed is non negligible allow sensor to run for a few more seconds
@@ -757,6 +763,7 @@ public class PressureCollectionService extends Service implements GoogleApiClien
             //Determine GoogleAPIAvailablity (requires Google Play Services)
             GoogleApiAvailability api = GoogleApiAvailability.getInstance();
             int resp = api.isGooglePlayServicesAvailable(this);
+            locManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
             if (resp == ConnectionResult.SUCCESS) {
                 buildGoogleApiClient();
                 hasPlay = true;
@@ -764,7 +771,7 @@ public class PressureCollectionService extends Service implements GoogleApiClien
                 //Google Play API inaccessible use android location manager instead
                 hasPlay = false;
                 //Define the location manager and network manager.
-                locManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+                //locManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
             }
             Timber.d("Check the Network Connection");
         } else {

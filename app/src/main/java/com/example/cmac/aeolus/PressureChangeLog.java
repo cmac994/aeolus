@@ -100,6 +100,7 @@ public class PressureChangeLog extends AppCompatActivity {
                         float dp6hr = c02.getFloat(7);
                         float dp12hr = c02.getFloat(8);
 
+                        Timber.d("String log: %.2f,%.2f",dp15min,dp30min);
                         //Format pressures as strings (to allow for N/A).
                         String m15,m30,h1,h3,h6,h12;
                         m15 = dp_to_str(dp15min);

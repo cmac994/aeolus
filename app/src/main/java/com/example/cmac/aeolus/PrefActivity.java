@@ -118,7 +118,7 @@ public class PrefActivity extends AppCompatActivity {
                 obfreq = obfreq * 60;
                 appPreferences.put("obfreq", Integer.toString(obfreq));
                 cancelAlarm();
-                startRepeatAlarm(60 * 1000);
+                startRepeatAlarm(obfreq * 1000);
             }
             //Handle change in pressure collection
             if (key.equals("collectpressure")) {

@@ -1,0 +1,28 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_realtime"
+        android:title="@string/action_realtime"
+        android:icon="@drawable/house"
+        app:showAsAction="ifRoom|withText" />
+    <item
+        android:id="@+id/action_collected"
+        android:title="@string/action_history"
+        android:icon="@drawable/graphicon"
+        app:showAsAction="ifRoom|withText" />
+    <item
+        android:id="@+id/action_preslog"
+        android:title="@string/action_preslog"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_dplog"
+        android:title="@string/action_dplog"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:title="@string/action_settings"
+        app:showAsAction="never"
+        android:visible="true" />
+</menu>

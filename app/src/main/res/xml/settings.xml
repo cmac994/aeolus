@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <PreferenceCategory
+        android:title="Pressure Units"
+        android:key="pref_key_storage_settings">
+        <ListPreference
+            android:key="pscale"
+            android:title="Pressure Units"
+            android:dialogTitle="Pressure Scale"
+            android:entries="@array/presArray"
+            android:entryValues="@array/presValues"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:defaultValue="@string/pdefault"/>
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="Pressure Obs"
+        android:key="stormopt">
+        <CheckBoxPreference
+            android:key="collectpressure"
+            android:title="Collect Pressure Data"
+            android:summary="Help atmospheric scientists improve weather forecasts by voluntarily collecting anonymous pressure observations!"
+            android:defaultValue="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"/>
+        <com.example.cmac.aeolus.SeekBarPreference
+            android:key="obfreqint"
+            android:summary="@string/freqsummary"
+            android:title="@string/freqtitle"
+            android:defaultValue="15"
+            app:maxValue="60"
+            app:minValue="5"
+            app:defaultValue="15"
+            app:padding="20"
+            app:step="5"
+            app:explain="@string/freqexpl"
+            app:unit=" Minutes" />
+    </PreferenceCategory>
+</PreferenceScreen>

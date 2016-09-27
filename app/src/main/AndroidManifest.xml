@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.cmac.aeolus">
+
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Needed only if your app targets Android 5.0 (API level 21) or higher. -->
+    <uses-feature android:name="android.hardware.location.gps" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <compatible-screens>
+        <!-- all small size screens -->
+        <screen android:screenSize="small" android:screenDensity="ldpi" />
+        <screen android:screenSize="small" android:screenDensity="mdpi" />
+        <screen android:screenSize="small" android:screenDensity="hdpi" />
+        <screen android:screenSize="small" android:screenDensity="xhdpi" />
+        <screen android:screenSize="small" android:screenDensity="480" />
+        <screen android:screenSize="small" android:screenDensity="560" />
+        <screen android:screenSize="small" android:screenDensity="640" />
+        <screen android:screenSize="small" android:screenDensity="280" />
+        <screen android:screenSize="small" android:screenDensity="360" />
+        <screen android:screenSize="small" android:screenDensity="420" />
+        <!-- all normal size screens -->
+        <screen android:screenSize="normal" android:screenDensity="ldpi" />
+        <screen android:screenSize="normal" android:screenDensity="mdpi" />
+        <screen android:screenSize="normal" android:screenDensity="hdpi" />
+        <screen android:screenSize="normal" android:screenDensity="xhdpi" />
+        <screen android:screenSize="normal" android:screenDensity="280" />
+        <screen android:screenSize="normal" android:screenDensity="360" />
+        <screen android:screenSize="normal" android:screenDensity="420" />
+        <screen android:screenSize="normal" android:screenDensity="480" />
+        <screen android:screenSize="normal" android:screenDensity="560" />
+        <screen android:screenSize="normal" android:screenDensity="640" />
+    </compatible-screens>
+
+    <application
+        android:supportsRtl="true"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:logo="@android:color/transparent"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme"
+        android:allowClearUserData="true"
+        android:fullBackupContent="true"
+        android:name="com.example.cmac.aeolus.MainApp">
+
+        <activity android:name="com.example.cmac.aeolus.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.example.cmac.aeolus.PressureCharts">
+        </activity>
+        <activity
+            android:name="com.example.cmac.aeolus.PrefActivity">
+        </activity>
+        <activity
+            android:name="com.example.cmac.aeolus.PressureLog">
+        </activity>
+        <activity
+            android:name="com.example.cmac.aeolus.PressureChangeLog">
+        </activity>
+
+        <service android:name="com.example.cmac.aeolus.PressureCollectionService"
+            android:process=":getpdata"
+            android:enabled="true">
+        </service>
+
+        <receiver android:name="com.example.cmac.aeolus.DeviceBootReceiver"
+            android:process=":getpdate">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name="com.example.cmac.aeolus.AlarmReceiver"
+            android:process=":getpdata">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>

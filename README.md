@@ -1,5 +1,5 @@
-# aeolus
-is a sample pressure app that logs and computes pressure change at intervals useful for atmospheric modelling applications.
+# Aeolus
+Aeolus is a sample pressure app that logs and computes pressure change at intervals useful for atmospheric modelling applications.
 The latest version of this app is designed for android devices running API 17 (Jelly Bean) to API 28 (Pie). This represents approximately 98.1% of android devices.
 
 ![Aeolus Home](http://www.atmos.washington.edu/~cmcnich/emailout2/aeolusmerge.png)

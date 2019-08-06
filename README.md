@@ -13,4 +13,4 @@ The primary purpose of this app is to demonstrate how to collect and compute est
 pressure change at semi-regular intervals. Frequent pressure collection is essential for estimating pressure change 
 at intervals useful for assimilating meteorological observations into weather models.
 
-To run Aeolus on your android device download the file Aeolus.apk on your smartphone. To install the app you may need to enabling unknown (3rd party) app installs in your device settings.
+To run Aeolus on your android device download the file Aeolus.apk onto your smartphone. Note that to install the app you may need to enable unknown (3rd party) app installs in your device settings.

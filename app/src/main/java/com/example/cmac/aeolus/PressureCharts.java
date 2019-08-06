@@ -2,21 +2,20 @@ package com.example.cmac.aeolus;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.support.v4.app.FragmentManager;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import com.github.mikephil.charting.charts.CombinedChart;
 import com.github.mikephil.charting.components.Legend;
@@ -37,10 +36,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Objects;
+
 import timber.log.Timber;
 
 //Class displays time series of pressure and pressure change measurements
-public class PressureCharts extends AppCompatActivity  {
+public class PressureCharts extends AppCompatActivity {
 
     //Define ArrayList variables to be plotted.
     ArrayList<Float> smart_dp = new ArrayList<>();
@@ -74,10 +75,10 @@ public class PressureCharts extends AppCompatActivity  {
         } else {
             //Initialize layout and define charview buttons
             setContentView(R.layout.activity_pcharts);
-            button1 = (Button) findViewById(R.id.latestpressure);
-            button2 = (Button) findViewById(R.id.allpressure);
+            button1 = findViewById(R.id.latestpressure);
+            button2 = findViewById(R.id.allpressure);
             // Setup toolbar to replace the action bar.
-            Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+            Toolbar toolbar = findViewById(R.id.toolbar);
             setSupportActionBar(toolbar);
             //Disable toolbar title in place of our own (defined in xml layout file)
             getSupportActionBar().setDisplayShowTitleEnabled(false);
@@ -89,7 +90,7 @@ public class PressureCharts extends AppCompatActivity  {
     //Set y-axis label precision to one decimal place.
     public class MyYAxisValueFormatter implements YAxisValueFormatter {
         private DecimalFormat mFormat;
-        public MyYAxisValueFormatter () {
+        MyYAxisValueFormatter() {
             mFormat = new DecimalFormat("###,###,##0.0"); // use one decimal
         }
         @Override
@@ -174,10 +175,10 @@ public class PressureCharts extends AppCompatActivity  {
             smart_times.clear(); local_pres_times.clear();
 
             //Determine if tables exists
-            Boolean ptableExists = appPreferences.getBoolean("ptableExists",false);
+            boolean ptableExists = appPreferences.getBoolean("ptableExists",false);
 
             //Set chart titles
-            TextView ch1 = (TextView) findViewById(R.id.pres1Title);
+            TextView ch1 = findViewById(R.id.pres1Title);
             ch1.setText(getString(R.string.pres1_title, pscale));
 
             if (ptableExists) {
@@ -227,7 +228,7 @@ public class PressureCharts extends AppCompatActivity  {
             }
 
             //Initialize first chart. Displays pressure and pressure change time series
-            fig1 = (CombinedChart) findViewById(R.id.pres1);
+            fig1 = findViewById(R.id.pres1);
             fig1.setDescription("");
             fig1.setNoDataTextDescription("Smartphone Pressures Have Not Yet Been Logged");
             // enable touch gestures
@@ -422,7 +423,7 @@ public class PressureCharts extends AppCompatActivity  {
     public class MyYAxisValueFormatter3 implements YAxisValueFormatter {
         private DecimalFormat mFormat;
 
-        public MyYAxisValueFormatter3 () {
+        MyYAxisValueFormatter3() {
             mFormat = new DecimalFormat("########0.000"); // use one decimal
         }
 

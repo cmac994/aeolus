@@ -7,14 +7,15 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import net.grandcentrix.tray.AppPreferences;
 
@@ -29,7 +30,6 @@ import timber.log.Timber;
  */
 
 public class PressureLog extends AppCompatActivity {
-    private Context context;
 
     AppPreferences appPreferences;
     String pscale;
@@ -38,14 +38,14 @@ public class PressureLog extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.pressure_log);
-        context = this;
+        Context context = this;
 
         //Define shared preferences and get current location info
         appPreferences = new AppPreferences(this.getApplicationContext());
         pscale = appPreferences.getString("pscale", "hPa");
 
         // Setup toolbar to replace the action bar.
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         //Disable toolbar title in place of our own (defined in xml layout file)
         getSupportActionBar().setDisplayShowTitleEnabled(false);
@@ -53,7 +53,7 @@ public class PressureLog extends AppCompatActivity {
         toolbar.setSubtitle("");
 
         // Reference to TableLayout
-        TableLayout tableLayout = (TableLayout) findViewById(R.id.tablelayout);
+        TableLayout tableLayout = findViewById(R.id.tablelayout);
         // Add header row
         TableRow rowHeader = new TableRow(context);
         rowHeader.setBackgroundColor(Color.parseColor("#c0c0c0"));
@@ -73,11 +73,11 @@ public class PressureLog extends AppCompatActivity {
         tableLayout.addView(rowHeader);
 
         //Set chart titles
-        TextView ch1 = (TextView) findViewById(R.id.dbtitle1);
+        TextView ch1 = findViewById(R.id.dbtitle1);
         ch1.setText(getString(R.string.pressure_log_title, pscale));
 
         //Determine if tables exists
-        Boolean ptableExists = appPreferences.getBoolean("ptableExists",false);
+        boolean ptableExists = appPreferences.getBoolean("ptableExists",false);
 
         if (ptableExists) {
             SQLiteDatabase db2 = openOrCreateDatabase("pressuredataDB", Context.MODE_PRIVATE, null);
@@ -139,6 +139,7 @@ public class PressureLog extends AppCompatActivity {
                     }
 
                 }
+                c02.close();
                 db2.setTransactionSuccessful();
             } catch (SQLiteException e) {
                 e.printStackTrace();

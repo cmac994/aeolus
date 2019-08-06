@@ -1,5 +1,6 @@
 package com.example.cmac.aeolus;
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -20,15 +21,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.OrientationEventListener;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 import com.github.mikephil.charting.charts.Chart;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.Legend;
@@ -42,6 +44,7 @@ import com.github.mikephil.charting.utils.Utils;
 import com.greysonparrelli.permiso.Permiso;
 import net.grandcentrix.tray.AppPreferences;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.Locale;
 import timber.log.Timber;
 
@@ -50,7 +53,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     //Define variables for Welcome.java
     Boolean locPermissionsGranted;
-    int pcnt = 0; String versionName;
+    int pcnt = 0;
+    String versionName;
 
     //Initialize global variables
     PendingIntent pendingIntent;
@@ -102,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Timber.d("Version name: %s",versionName);
 
         // Set a toolbar to replace the action bar.
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayShowTitleEnabled(false);
         //Disable default toolbar title
@@ -111,8 +115,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         //Determine if location permissions have been granted at runtime. If not request them.
         if ((!locPermissionsGranted) && (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)) {
-                locPermissionRequest();
                 Timber.d("Location Request");
+                locPermissionRequest();
         } else {
 
             //get default submission frequency from shared pref
@@ -140,7 +144,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             //Determine if alarm is up and running.
             Boolean alarmUp = appPreferences.getBoolean("alarm_set",false);
-            Boolean collectswitch = appPreferences.getBoolean("collectswitch",false);
+            boolean collectswitch = appPreferences.getBoolean("collectswitch",false);
 
             Timber.d("AlarmUP: %s",alarmUp);
             /*Set initial alarms ifpressure collection has been turned back on
@@ -149,6 +153,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 Timber.d("Alarm not yet set, start alarm");
                 appPreferences.put("StartTime", System.currentTimeMillis());
                 appPreferences.put("alarm_set", true);
+                appPreferences.put("ServiceOn", false);
                 if (collectswitch) {
                     appPreferences.put("collectswitch", false);
                 }
@@ -157,14 +162,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 Timber.d("Alarm already set no need to start it");
             }
             //Initialize textview for real-time pressure.
-            phonePressure = (TextView) findViewById(R.id.sensorval);
+            phonePressure = findViewById(R.id.sensorval);
         }
     }
 
     //Create y-axis value formatter to ensure appropriate precision is provided for real-time chart.
     public class MyYAxisValueFormatter3 implements YAxisValueFormatter {
         private DecimalFormat mFormat;
-        public MyYAxisValueFormatter3 () {
+        MyYAxisValueFormatter3() {
             mFormat = new DecimalFormat("###,###,##0.000"); // use one decimal
         }
         @Override
@@ -177,7 +182,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     //Set decimal places for Yaxis labels
     public class MyYAxisValueFormatter implements YAxisValueFormatter {
         private DecimalFormat mFormat;
-        public MyYAxisValueFormatter () {
+        MyYAxisValueFormatter() {
             mFormat = new DecimalFormat("###,###,##0.00"); // use two decimals
         }
         @Override
@@ -191,15 +196,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     //Start Repeat Alarm
     public void startRepeatAlarm(int interval) {
         Timber.d("Alarm started");
-        Intent alarmIntent = new Intent(getApplicationContext(), AlarmReceiver.class);
-        pendingIntent = PendingIntent.getBroadcast(getApplicationContext(), 0, alarmIntent,PendingIntent.FLAG_UPDATE_CURRENT);
-        AlarmManager am = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
-        //Set inexact repeating alarm to run at the specified interval.
+        AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent alarmIntent = new Intent(this, AlarmReceiver.class);
+        pendingIntent = PendingIntent.getBroadcast(this, 0, alarmIntent,0); //PendingIntent.FLAG_UPDATE_CURRENT);
+        //Timber.d("Alarm set for interval: "+interval);
+
+        //Note you could potential increase collection frequency by enabling the retrieval of pressure when the phone is sleeping (i.e idle) by using
+        //am.setAndAllowWhileIdle() however this is not a repeating alarm and this alarm would have to be reset
+        //after pressure retrieval in PressureCollectionService.java).
         am.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), interval, pendingIntent);
     }
 
     /*Define class to determine the battery capacity of the device so that the observation frequency
     can be tailored to the individual phone*/
+    @SuppressLint("PrivateApi")
     public double getBatteryCapacity() {
         Object mPowerProfile_ = null;
         final String POWER_PROFILE_CLASS = "com.android.internal.os.PowerProfile";
@@ -378,6 +388,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         Permiso.getInstance().onRequestPermissionResult(requestCode, permissions, grantResults);
+        Timber.d(Arrays.toString(permissions));
         if (permissions[0].contains("LOCATION")) {
             pcnt += 1;
             if (grantResults[0] == -1) {
@@ -391,6 +402,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     //Define function to set y-tick label count and interval
+    //Note: could improve code readability here by using case: switch.
     public float setLabels(float mrange) {
         float mdiff;
         if ((mrange > 500f) && (mrange <= 1000f)) {
@@ -503,7 +515,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         Timber.d("OnResume");
         //Define LineChart for realtime sensor display
-        mChart = (LineChart) findViewById(R.id.pres1);
+        mChart = findViewById(R.id.pres1);
 
         // no description text
         mChart.setDescription("");

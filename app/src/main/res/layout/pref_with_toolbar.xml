@@ -1,13 +1,10 @@
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white">
-    <android.support.v7.widget.Toolbar
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
+    <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -24,7 +21,8 @@
                 android:layout_height="40dp"
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
-                android:src="@mipmap/ic_launcher" />
+                android:src="@mipmap/ic_launcher"
+                android:contentDescription="@string/logo" />
             <TextView
                 android:id="@+id/header"
                 android:layout_width="wrap_content"
@@ -37,7 +35,7 @@
                 android:textStyle="bold"
                 android:textColor="@color/black"/>
         </RelativeLayout>
-    </android.support.v7.widget.Toolbar>
+    </androidx.appcompat.widget.Toolbar>
     <FrameLayout
         android:id="@+id/content_frame"
         android:layout_below="@+id/toolbar"

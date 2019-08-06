@@ -12,8 +12,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
-            <android.support.v7.widget.Toolbar
-                xmlns:android="http://schemas.android.com/apk/res/android"
+            <androidx.appcompat.widget.Toolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -30,7 +29,8 @@
                         android:layout_height="40dp"
                         android:scaleType="fitCenter"
                         android:adjustViewBounds="true"
-                        android:src="@mipmap/ic_launcher" />
+                        android:src="@mipmap/ic_launcher"
+                        android:contentDescription="@string/logo" />
                     <TextView
                         android:id="@+id/header"
                         android:layout_width="wrap_content"
@@ -43,7 +43,7 @@
                         android:textStyle="bold"
                         android:textColor="@color/black"/>
                 </RelativeLayout>
-            </android.support.v7.widget.Toolbar>
+            </androidx.appcompat.widget.Toolbar>
 
             <TextView
                 android:id="@+id/dbtitle2"

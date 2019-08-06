@@ -20,6 +20,8 @@
     <string name="freqexpl">15 minutes is the default submission frequency. This frequency is ideal as it conserves battery life and provides scientist with frequent data crucial for short-term forecasting</string>
 
     <string name="pdefault">hPa</string>
+    <string name="never_show_again">Never show again.</string>
+    <string name="logo">Logo</string>
     <string-array name="presArray">
         <item>inHg</item>
         <item>mmHg</item>

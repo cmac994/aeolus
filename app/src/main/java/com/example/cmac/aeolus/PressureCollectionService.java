@@ -27,17 +27,24 @@ import android.os.Build.VERSION;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.os.RemoteException;
 import android.os.SystemClock;
-import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.NotificationCompat;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.GoogleApiClient.Builder;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
 import net.grandcentrix.tray.AppPreferences;
@@ -51,6 +58,8 @@ import java.util.TimeZone;
 
 import timber.log.Timber;
 
+import static com.example.cmac.aeolus.MainApp.CHANNEL_ID;
+
 //Separate class to trigger significant motion sensor
 @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
 class TriggerListener extends TriggerEventListener {
@@ -63,18 +72,16 @@ class TriggerListener extends TriggerEventListener {
     //Detect significant motion events
     @Override
     public void onTrigger(TriggerEvent event) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            if (event.values[0] == 1) {
-                appPreferences.put("sigMotionDetected", true);
-            }
+        if (event.values[0] == 1) {
+            appPreferences.put("sigMotionDetected", true);
         }
         // Sensor is auto disabled.
     }
 }
 //Pressure and Pressure Change Collection Class
-public class PressureCollectionService extends Service implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener, android.location.LocationListener, SensorEventListener {
+public class PressureCollectionService extends Service implements SensorEventListener {
     //Define essential variables for service
-    public static final String TAG = "PressureService";
+    public static final String TAG = "Aeolus:PressureService";
     private SensorManager mSensorManager = null;
     private WakeLock mWakeLock = null;
     long epochTime, millTime;
@@ -83,7 +90,7 @@ public class PressureCollectionService extends Service implements GoogleApiClien
     double ci_stationary;
     double ci_moved;
     double battery_pct;
-    float latitude, longitude, press_diff, press_avg, accuracy, speed, gpsStartTime, startTime, startMeasure;
+    float latitude, longitude, press_avg, accuracy, speed, gpsStartTime, startTime, startMeasure;
     float last_latitude = 0.0f, last_longitude = 0.0f, last_accuracy = 15.0f, dist;
     float last_tchange = 0;
     float total_time = 0;
@@ -97,7 +104,8 @@ public class PressureCollectionService extends Service implements GoogleApiClien
     boolean stopped = false;
     boolean loc_called = false;
     boolean sigMotionDetected = false;
-    boolean service_running;
+    boolean service_running = false;
+    boolean service_foreground;
 
     AppPreferences appPreferences;
 
@@ -121,7 +129,10 @@ public class PressureCollectionService extends Service implements GoogleApiClien
     TriggerEventListener triggerListener;
     ArrayList<Long> timlist = new ArrayList<>();
     float dp15min, dp30min, dp1hr, dp3hr, dp6hr, dp12hr;
+    FusedLocationProviderClient fusedLocationClient;
     GoogleApiClient mGoogleApiClient;
+    private LocationRequest locationRequest;
+    private LocationCallback locationCallback;
     LocationManager locManager;
     LocationRequest mLocationRequest;
     Handler handler_orig = new Handler();
@@ -231,14 +242,12 @@ public class PressureCollectionService extends Service implements GoogleApiClien
     /*Define On sensorChanged function to log sensor measurements from the Pressure
     sensor and Sig Motion Sensor while the GPS location is being locked*/
     public void onSensorChanged(SensorEvent event) {
-        switch (event.sensor.getType()) {
-            //Read sensor data into arrays on a case by case basis (i.e. determine which sensor each event corresponsds to)
-            case (Sensor.TYPE_PRESSURE):
-                float press = event.values[0]; //Retrieve the pressure
-                if (press > 500.0f && press < 1100.0f) {
-                    presslist.add(press);
-                }
-                break;
+        //Read sensor data into arrays on a case by case basis (i.e. determine which sensor each event corresponsds to)
+        if (event.sensor.getType() == Sensor.TYPE_PRESSURE) {
+            float press = event.values[0]; //Retrieve the pressure
+            if (press > 500.0f && press < 1100.0f) {
+                presslist.add(press);
+            }
         }
     }
 
@@ -248,7 +257,7 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         Double dLat = Math.toRadians(lat2-lat1);  // deg2rad below
         Double dLon = Math.toRadians(lon2-lon1);
         Double a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        Double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         return R * c; // Distance in meters
     }
 
@@ -307,14 +316,14 @@ public class PressureCollectionService extends Service implements GoogleApiClien
 
         //Compute Stationary Confidence
         double Ts1 = Math.pow(hci,1.0/hci_cntS);
-        double Ts2 = (Math.pow(mci,1.0/mci_cntS))*(1.0 - Ts1);
-        double Ts3 = (Math.pow(lci,1.0/lci_cntS))*(1.0 - (Ts2+Ts1));
+        double Ts2 = Math.pow(mci,1.0/mci_cntS)*(1.0 - Ts1);
+        double Ts3 = Math.pow(lci,1.0/lci_cntS)*(1.0 - (Ts2+Ts1));
         ci_stationary = 100.0f*(Ts1 + Ts2 + Ts3);
 
         //Compute Non-Stationary Confidence
-        double Tns1 = Math.pow(hci,1.0/hci_cntNS);
-        double Tns2 = (Math.pow(mci,1.0/mci_cntNS))*(1.0 - Tns1);
-        double Tns3 = (Math.pow(lci,1.0/lci_cntNS))*(1.0 - (Tns2+Tns1));
+        double Tns1 = Math.pow(hci,1.0/hci_cntNS+0.1);
+        double Tns2 = Math.pow(mci,1.0/mci_cntNS+0.1)*(1.0 - Tns1);
+        double Tns3 = Math.pow(lci,1.0/lci_cntNS+0.1)*(1.0 - (Tns2+Tns1));
         ci_moved = 100.0f*(Tns1 + Tns2 + Tns3);
 
         /*Note that this algorithm is completely subjective and entirely arbitrary. The algorithm helps prevent
@@ -467,7 +476,7 @@ public class PressureCollectionService extends Service implements GoogleApiClien
                             dp15min = dp.get(t);
                         } else if (i == 1) {
                             dp30min = dp.get(t);
-                        } else if (i == 2) {
+                        } else {
                             dp1hr = dp.get(t);
                         }
                     }
@@ -510,6 +519,7 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         }
     }
 
+    /*
     //Build GoogleAPI Client for location retrieval
     protected synchronized void buildGoogleApiClient() {
         Timber.d("Build Google Api Client");
@@ -531,7 +541,8 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         //Set maximum number of updates to 3 (to limit battery usage).
         mLocationRequest.setNumUpdates(3);
-    }
+    }*/
+
 
     //Check location permissions (primarily for API > 22)
     private boolean checkLocPermission() {
@@ -544,9 +555,27 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         return res == 0;
     }
 
-    //Start Location updates
-    protected void startLocationUpdates() {
+    //Round value to 6th decimal place.
+    public float roundloc(double v) {
+        return (float) (Math.floor((v * 1000000.0) + 0.5d) / 1000000.0);
+    }
+
+    private void startLocationUpdates() {
         if (checkLocPermission()) {
+
+            locationRequest = LocationRequest.create();
+            //Set frequency and priority of location updates
+            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+            locationRequest.setInterval(5000);
+            locationRequest.setFastestInterval(3000);
+            locationRequest.setSmallestDisplacement(0);
+            //Set maximum number of updates to 3 (to limit battery usage).
+            locationRequest.setNumUpdates(3);
+            defineCallback();
+
+            //Begin retrieving location updates
+            fusedLocationClient.requestLocationUpdates(locationRequest,locationCallback, Looper.myLooper());
+
             Timber.d("Start Location updates");
             loc_called = true;
             /*If location updates takes to long (> 35s after start of location query, 45s after start of service)
@@ -555,17 +584,6 @@ public class PressureCollectionService extends Service implements GoogleApiClien
             /*IMPORTANT: if possible use both the FusedLocationAPI and the Android Manager to Retrieve location updates.
             By using both providers improvements in gps accuracy can be obtained and deficiencies in either provider can be offset.
              */
-            if (hasPlay) {
-                //Formally request location updates from Google Play API
-                LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
-                //Request location updates from Android manager
-                locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, this);
-                locManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, this);
-            } else {
-                //Request location updates from Android manager
-                locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, this);
-                locManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, this);
-            }
         } else {
             //Location permissions insufficient end service.
             Timber.d("Location Permissions insufficient");
@@ -573,17 +591,96 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         }
     }
 
+    //Start Location updates
+    protected void defineCallback() {
+        //Initialize location callback to process data once location estimates are retrieved.
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+                    return;
+                }
+                for (Location location : locationResult.getLocations()) {
+                    if (location != null) {
+                        Timber.d(location.toString());
+                        //Count Location Updates (not to exceed 2).
+                        cnt = cnt + 1;
+                        Timber.d("Cound: " + Integer.toString(cnt));
+                        //Append GPS data to array lists (so best location data can be retrieved from series of GPS measurements)(
+                        latitude_list.add(roundloc(location.getLatitude()));
+                        longitude_list.add(roundloc(location.getLongitude()));
+                        speed_list.add(location.getSpeed());
+                        accuracy_list.add(location.getAccuracy());
+                        //Record the time of the first location estimate
+                        if (cnt == 1) {
+                            gpsStartTime = SystemClock.elapsedRealtime() / 1000f;
+                        }
+
+                        //Compute the distance between the phone's current and previous locations using the haversine formula
+                        dist = (float) haversine(last_latitude, last_longitude, (float) location.getLatitude(), (float) location.getLongitude());
+                        //Estimate the time between GPS updates.
+                        if (last_tchange == 0) {
+                            last_tchange = (SystemClock.elapsedRealtime() - startTime) / 1000f;
+                        } else {
+                            last_tchange = (SystemClock.elapsedRealtime() / 1000f - last_tchange);
+                        }
+                        total_time = (SystemClock.elapsedRealtime() / 1000f) - gpsStartTime;
+                        /* When to stop Location Estimation -- THIS IS IMPORTANT to ensure a balance between battery life and observation quality
+                          to Improve GPS efficiency only a single measurement is retrieved if the device hasn't moved (< 30m) and the GPS fix is accurate (< 30m).
+                          If two GPS locations have been retrieved and more than 12 seconds has passed end location retrieval to limit power consumption.
+                          For the first measurement since no previous location is known, take at least two GPS measurements to ensure a good initial location estimate.
+                         */
+
+                        if (((last_latitude == 0.0f) && (last_longitude == 0.0f) && (last_accuracy == 0.0f) && (cnt > 1)) || ((total_time > 12) && (cnt > 1)) || ((dist < 30.0) && (accuracy < 30.0))) {
+                            //Retrieve the best location estimate by extracting GPS data at the index for which the best GPS accuracy was achieved.
+                            int best = 0;
+                            for (int i = 0; i < cnt; i++) {
+                                if ((accuracy_list.get(i)).equals(Collections.min(accuracy_list))) {
+                                    best = i;
+                                }
+                            }
+                            //Retrieve the most optimum location data.
+                            latitude = latitude_list.get(best);
+                            longitude = longitude_list.get(best);
+                            accuracy = accuracy_list.get(best);
+                            speed = Collections.max(speed_list);
+                            //Stop Location updates
+                            stopLocationUpdates();
+                        }
+                    }
+                }
+            }
+        };
+        /*
+        if (hasPlay) {
+            //Formally request location updates from Google Play API -- note: in the future this code should be updated to use the fusedlocationprovider.
+            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+            //Request location updates from Android manager
+            locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, this);
+            locManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, this);
+        } else {
+            //Request location updates from Android manager
+            locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, this);
+            locManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, this);
+        }*/
+    }
+
     //Stop Location Updates
     protected void stopLocationUpdates() {
         Timber.d("location updates stopped");
         stopped = true;
         //Formally stop location updates with request to GoogleAPI Client
+        /*
         if (hasPlay) {
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
         }
         //Remove GPS status listener
         if (checkLocPermission()) {
             locManager.removeUpdates(this);
+        }*/
+
+        if (fusedLocationClient != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
         }
 
         /*If speed is non negligible allow sensor to run for a few more seconds
@@ -601,11 +698,7 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         }
     }
 
-    //Round value to 6th decimal place.
-    public float roundloc(double v) {
-        return (float) (Math.floor((v * 1000000.0) + 0.5d) / 1000000.0);
-    }
-
+    /*
     //Detect Location Change.
     public void onLocationChanged(Location location) {
         //Count Location Updates (not to exceed 2).
@@ -617,23 +710,23 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         accuracy_list.add(location.getAccuracy());
         //Record the time of the first location estimate
         if (cnt == 1) {
-            gpsStartTime = SystemClock.elapsedRealtime()/1000L;
+            gpsStartTime = SystemClock.elapsedRealtime()/1000f;
         }
 
         //Compute the distance between the phone's current and previous locations using the haversine formula
         dist = (float) haversine(last_latitude, last_longitude, (float) location.getLatitude(), (float) location.getLongitude());
         //Estimate the time between GPS updates.
         if (last_tchange == 0) {
-            last_tchange = (SystemClock.elapsedRealtime() - startTime)/1000L;
+            last_tchange = (SystemClock.elapsedRealtime() - startTime)/1000f;
         } else {
-            last_tchange = (SystemClock.elapsedRealtime()/1000L - last_tchange);
+            last_tchange = (SystemClock.elapsedRealtime()/1000f - last_tchange);
         }
-        total_time = (SystemClock.elapsedRealtime()/1000L) - gpsStartTime;
-        /* When to stop Location Estimation -- THIS IS IMPORTANT to ensure a balance between battery life and observation quality
+        total_time = (SystemClock.elapsedRealtime()/1000f) - gpsStartTime;
+        // When to stop Location Estimation -- THIS IS IMPORTANT to ensure a balance between battery life and observation quality
           to Improve GPS efficiency only a single measurement is retrieved if the device hasn't moved (< 30m) and the GPS fix is accurate (< 30m).
           If two GPS locations have been retrieved and more than 12 seconds has passed end location retrieval to limit power consumption.
           For the first measurement since no previous location is known, take at least two GPS measurements to ensure a good initial location estimate.
-         */
+
         if ( ((last_latitude == 0.0f) && (last_longitude == 0.0f) && (last_accuracy == 0.0f) && (cnt > 1)) || ((total_time > 12) && (cnt > 1)) || ((dist < 30.0) && (accuracy < 30.0))) {
             //Retrieve the best location estimate by extracting GPS data at the index for which the best GPS accuracy was achieved.
             int best = 0;
@@ -662,9 +755,8 @@ public class PressureCollectionService extends Service implements GoogleApiClien
     @Override
     public void onProviderDisabled(String provider) {
     }
-
     //Handle Mandatory Google API Client Function Calls
-    public void onConnectionSuspended(int i) {
+    /*public void onConnectionSuspended(int i) {
         Timber.d("Connection Suspended");
         mGoogleApiClient.connect();
     }
@@ -672,7 +764,7 @@ public class PressureCollectionService extends Service implements GoogleApiClien
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
         Timber.d("Connection Failed");
         endService();
-    }
+    }*/
 
     //Get Status of Battery to help modify observation frequency to conserve power and to aid in determining phone movement.
     public void getBatteryStatus() {
@@ -721,9 +813,6 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         last_longitude = appPreferences.getFloat("LongitudeLocal",0.0f);
         last_accuracy = appPreferences.getFloat("AccuracyLocal",0.0f);
 
-        //Determine if the service is already running
-        service_running = appPreferences.getBoolean("ServiceOn", false);
-
         //get default submission frequency from pref
         obfreq = appPreferences.getInt("obfreq",900);
         Timber.d("obfreq: %s",obfreq);
@@ -732,17 +821,21 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         PowerManager manager =
                 (PowerManager) getSystemService(Context.POWER_SERVICE);
 
+        //Determine if the service is already running
+        service_running = appPreferences.getBoolean("ServiceOn", false);
+        service_running = false;
+        Timber.d("Service is: ",Boolean.toString(service_running));
+        //Get Battery Status info
+        getBatteryStatus();
         //If the service is already running let the service already in progress complete
         if (service_running) {
             Timber.d("Service is already Running Stop service");
             uploadData = false;
+            endService();
         } else {
             //Note that the service is running (to prevent multiple instances)
             appPreferences.put("ServiceOn", true);
         }
-
-        //Get Battery Status info
-        getBatteryStatus();
 
         if (uploadData) {
             //Get the sensor Manger from the Sensor Service
@@ -757,14 +850,14 @@ public class PressureCollectionService extends Service implements GoogleApiClien
             //Set partial wakelock
             mWakeLock = manager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
             //Wifi Lock (may help Google Play API Location services get GPS fix quicker by triggering WiFi when asleep).
-            WifiManager wm = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+            WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             wifiLock= wm.createWifiLock(WifiManager.WIFI_MODE_FULL, TAG);
 
             //Determine GoogleAPIAvailablity (requires Google Play Services)
-            GoogleApiAvailability api = GoogleApiAvailability.getInstance();
-            int resp = api.isGooglePlayServicesAvailable(this);
-            locManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-            if (resp == ConnectionResult.SUCCESS) {
+            //GoogleApiAvailability api = GoogleApiAvailability.getInstance();
+            //int resp = api.isGooglePlayServicesAvailable(this);
+            //locManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+            /*if (resp == ConnectionResult.SUCCESS) {
                 buildGoogleApiClient();
                 hasPlay = true;
             } else {
@@ -772,10 +865,10 @@ public class PressureCollectionService extends Service implements GoogleApiClien
                 hasPlay = false;
                 //Define the location manager and network manager.
                 //locManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-            }
+            }*/
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+            startLocationUpdates();
             Timber.d("Check the Network Connection");
-        } else {
-            endService();
         }
     }
 
@@ -811,7 +904,12 @@ public class PressureCollectionService extends Service implements GoogleApiClien
         if ((mWakeLock != null) && (mWakeLock.isHeld())) {
             mWakeLock.release();
             //Convert foreground service to background service
-            stopForeground(true);
+            service_foreground = appPreferences.getBoolean("ServiceForeground", false);
+            Timber.d("Service Foreground: ",Boolean.toString(service_foreground));
+            if (service_foreground) {
+                stopForeground(true);
+                appPreferences.put("ServiceForeground", false);
+            }
         }
 
         /*If battery level drops below 25% and submission frequency is less than or equal to 15 min
@@ -865,24 +963,37 @@ public class PressureCollectionService extends Service implements GoogleApiClien
     public int onStartCommand(Intent intent,int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
         if (uploadData) {
+
+            Timber.d("Create notification Intent");
+            Intent notificationIntent = new Intent(this, MainActivity.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(this,
+                    0, notificationIntent, 0);
+
+            Timber.d("initialize notification");
             String s1 = "Retreving pressure measurements from barometer";
-            Notification notification = new NotificationCompat.Builder(this)
+            Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                     .setContentTitle("Crowdsourcing Pressure")
                     .setContentText(s1)
+                    .setContentIntent(pendingIntent)
                     .setOngoing(true).build();
+
             //Initialize foreground notification
-            startForeground(1137, notification);
+            startForeground(1, notification);
+
+            //Note that the service is running in the foreground.
+            appPreferences.put("ServiceForeground", true);
+
             //Connect to GoogleApiClient
-            if (hasPlay) {
+            /*if (hasPlay) {
                 try {
                     mGoogleApiClient.connect();
                 } catch (NullPointerException ne) {
                     hasPlay = false;
                 }
-            }
-            //Acquire wakelock
-            mWakeLock.acquire();
-            //Acquire wifiLock
+            }*/
+            //Acquire wakelock (this wakes phone up enabling access to WiFi).
+            //Will release wakelock at end of service, but just in case something goes wrong let OS exterminate any remaining wakelocks after 2 mins.
+            mWakeLock.acquire(2*60*1000L /*2 minutes*/);
             try {
                 wifiLock.acquire();
             } catch (Exception we) {

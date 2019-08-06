@@ -10,12 +10,14 @@ import android.os.SystemClock;
 import android.preference.CheckBoxPreference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
-import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import net.grandcentrix.tray.AppPreferences;
 import timber.log.Timber;
@@ -28,7 +30,9 @@ public class PrefActivity extends AppCompatActivity {
         setContentView(R.layout.pref_with_toolbar);
 
         //Initialize toolbar for preference activity
-        android.support.v7.widget.Toolbar toolbar = (android.support.v7.widget.Toolbar) findViewById(com.example.cmac.aeolus.R.id.toolbar);
+        //Toolbar toolbar = findViewById(R.id.toolbar);
+        androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
+        //android.support.v7.widget.Toolbar toolbar = (android.support.v7.widget.Toolbar) findViewById(com.example.cmac.aeolus.R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayShowTitleEnabled(false);
         //Disable default title

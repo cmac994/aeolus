@@ -27,7 +27,7 @@ public class DeviceBootReceiver extends BroadcastReceiver {
                 obfreq = 900;
             }
             //Determine if pressure collection is enabled, if so restart alarms when the device boots up.
-            Boolean pcollect = appPreferences.getBoolean("collectpressure",true);
+            boolean pcollect = appPreferences.getBoolean("collectpressure",true);
             if (pcollect) {
                 startRepeatAlarm(obfreq*1000,context);
             }

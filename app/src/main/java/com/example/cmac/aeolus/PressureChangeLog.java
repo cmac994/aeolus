@@ -7,14 +7,15 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import net.grandcentrix.tray.AppPreferences;
 
@@ -45,7 +46,7 @@ public class PressureChangeLog extends AppCompatActivity {
         pscale = appPreferences.getString("pscale", "hPa");
 
         // Setup toolbar to replace the action bar.
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         //Disable toolbar title in place of our own (defined in xml layout file)
         getSupportActionBar().setDisplayShowTitleEnabled(false);
@@ -53,7 +54,7 @@ public class PressureChangeLog extends AppCompatActivity {
         toolbar.setSubtitle("");
 
         // Reference to TableLayout
-        TableLayout tableLayout = (TableLayout) findViewById(R.id.tablelayout2);
+        TableLayout tableLayout = findViewById(R.id.tablelayout2);
         // Add header row
         TableRow rowHeader = new TableRow(context);
         rowHeader.setBackgroundColor(Color.parseColor("#c0c0c0"));
@@ -73,11 +74,11 @@ public class PressureChangeLog extends AppCompatActivity {
         tableLayout.addView(rowHeader);
 
         //Set chart titles
-        TextView ch1 = (TextView) findViewById(R.id.dbtitle2);
+        TextView ch1 = findViewById(R.id.dbtitle2);
         ch1.setText(getString(R.string.dp_log_title, pscale));
 
         //Determine if tables exists
-        Boolean dptableExists = appPreferences.getBoolean("dptableExists",false);
+        boolean dptableExists = appPreferences.getBoolean("dptableExists",false);
 
         if (dptableExists) {
             SQLiteDatabase db2 = openOrCreateDatabase("pressuredataDB", Context.MODE_PRIVATE, null);
@@ -138,6 +139,7 @@ public class PressureChangeLog extends AppCompatActivity {
                     }
 
                 }
+                c02.close();
                 db2.setTransactionSuccessful();
             } catch (SQLiteException e) {
                 e.printStackTrace();
